@@ -25,7 +25,7 @@
 
 import UIKit
 
-public typealias CRRefreshHandler = (() -> ())
+public typealias CRRefreshHandler = () -> Void
 
 public enum CRRefreshState {
     /// 普通闲置状态
@@ -41,15 +41,14 @@ public enum CRRefreshState {
 }
 
 open class CRRefreshComponent: UIView {
-    
     open weak var scrollView: UIScrollView?
-    
+
     open var scrollViewInsets: UIEdgeInsets = .zero
-    
+
     open var handler: CRRefreshHandler?
-    
+
     open var animator: CRRefreshProtocol!
-    
+
     open var state: CRRefreshState = .idle {
         didSet {
             if state != oldValue {
@@ -59,29 +58,29 @@ open class CRRefreshComponent: UIView {
             }
         }
     }
-    
+
     fileprivate var isObservingScrollView = false
-    
-    fileprivate var isIgnoreObserving     = false
-    
-    fileprivate(set) var isRefreshing     = false
-    
-    public override init(frame: CGRect) {
+
+    fileprivate var isIgnoreObserving = false
+
+    fileprivate(set) var isRefreshing = false
+
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         autoresizingMask = [.flexibleLeftMargin, .flexibleWidth, .flexibleRightMargin]
     }
-    
+
     public convenience init(animator: CRRefreshProtocol = CRRefreshAnimator(), handler: @escaping CRRefreshHandler) {
         self.init(frame: .zero)
-        self.handler  = handler
+        self.handler = handler
         self.animator = animator
     }
-    
+
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    open override func willMove(toSuperview newSuperview: UIView?) {
+
+    override open func willMove(toSuperview newSuperview: UIView?) {
         super.willMove(toSuperview: newSuperview)
         // 旧的父控件移除监听
         removeObserver()
@@ -94,8 +93,8 @@ open class CRRefreshComponent: UIView {
             }
         }
     }
-    
-    open override func didMoveToSuperview() {
+
+    override open func didMoveToSuperview() {
         super.didMoveToSuperview()
         scrollView = superview as? UIScrollView
         let view = animator.view
@@ -110,18 +109,19 @@ open class CRRefreshComponent: UIView {
                 .flexibleWidth,
                 .flexibleTopMargin,
                 .flexibleHeight,
-                .flexibleBottomMargin
+                .flexibleBottomMargin,
             ]
         }
     }
-    
-    //MARK: Public Methods
-    public final func beginRefreshing() -> Void {
+
+    // MARK: Public Methods
+
+    public final func beginRefreshing() {
         guard isRefreshing == false else { return }
-        if self.window != nil {
+        if window != nil {
             state = .refreshing
             start()
-        }else {
+        } else {
             if state != .refreshing {
                 state = .willRefresh
                 // 预防view还没显示出来就调用了beginRefreshing
@@ -135,57 +135,70 @@ open class CRRefreshComponent: UIView {
             }
         }
     }
-    
-    public final func endRefreshing() -> Void {
+
+    public final func endRefreshing() {
         guard isRefreshing else { return }
-        self.stop()
+        stop()
     }
-    
+
     public func ignoreObserver(_ ignore: Bool = false) {
         isIgnoreObserving = ignore
     }
-    
+
     public func start() {
         isRefreshing = true
     }
-    
+
     public func stop() {
         isRefreshing = false
     }
-    
-    public func sizeChange(change: [NSKeyValueChangeKey : Any]?) {}
-    
-    public func offsetChange(change: [NSKeyValueChangeKey : Any]?) {}
+
+    public func sizeChange(change: [NSKeyValueChangeKey: Any]?) {}
+
+    public func offsetChange(change: [NSKeyValueChangeKey: Any]?) {}
 }
 
+// MARK: Observer Methods
 
-
-//MARK: Observer Methods 
 extension CRRefreshComponent {
-    
-    fileprivate static var context            = "CRRefreshContext"
-    fileprivate static let offsetKeyPath      = "contentOffset"
+    fileprivate static var context = NSObject()
+//    fileprivate static var context = "CRRefreshContext"
+    fileprivate static let offsetKeyPath = "contentOffset"
     fileprivate static let contentSizeKeyPath = "contentSize"
-    public static let animationDuration       = 0.25
-    
+    public static let animationDuration = 0.25
+
+    func getUnsafeRawPointer(_ object: AnyObject) -> UnsafeRawPointer {
+        return UnsafeRawPointer(Unmanaged.passUnretained(object).toOpaque())
+    }
+
+    func getUnsafeMutableRawPointer(_ object: AnyObject) -> UnsafeMutableRawPointer {
+        return Unmanaged.passUnretained(object).toOpaque()
+    }
+
     fileprivate func removeObserver() {
         if let scrollView = superview as? UIScrollView, isObservingScrollView {
-            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, context: &CRRefreshComponent.context)
-            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, context: &CRRefreshComponent.context)
+            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, context: getUnsafeMutableRawPointer(CRRefreshComponent.context))
+            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, context: getUnsafeMutableRawPointer(CRRefreshComponent.context))
+//            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, context: &CRRefreshComponent.context)
+//            scrollView.removeObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, context: &CRRefreshComponent.context)
             isObservingScrollView = false
         }
     }
-    
+
     fileprivate func addObserver(_ view: UIView?) {
         if let scrollView = view as? UIScrollView, !isObservingScrollView {
-            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, options: [.initial, .new], context: &CRRefreshComponent.context)
-            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, options: [.initial, .new], context: &CRRefreshComponent.context)
+            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, options: [.initial, .new], context: getUnsafeMutableRawPointer(CRRefreshComponent.context))
+            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, options: [.initial, .new], context: getUnsafeMutableRawPointer(CRRefreshComponent.context))
+//            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.offsetKeyPath, options: [.initial, .new], context: &CRRefreshComponent.context)
+//            scrollView.addObserver(self, forKeyPath: CRRefreshComponent.contentSizeKeyPath, options: [.initial, .new], context: &CRRefreshComponent.context)
             isObservingScrollView = true
         }
     }
-    
-    open override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if context == &CRRefreshComponent.context {
+
+    override open func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        let pt = getUnsafeMutableRawPointer(CRRefreshComponent.context)
+        if context == pt {
+//        if context == &CRRefreshComponent.context {
             guard isUserInteractionEnabled == true && isHidden == false else {
                 return
             }

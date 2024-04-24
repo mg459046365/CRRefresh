@@ -37,97 +37,95 @@ extension CRRefreshView {
 }
 
 public struct CRRefreshDSL: CRRefreshViewProtocol {
-    
     public var scroll: CRRefreshView
-    
+
     internal init(scroll: CRRefreshView) {
         self.scroll = scroll
     }
+
     /// 添加上拉刷新控件
     @discardableResult
     public func addHeadRefresh(animator: CRRefreshProtocol = NormalHeaderAnimator(), handler: @escaping CRRefreshHandler) -> CRRefreshHeaderView {
         return CRRefreshMake.addHeadRefreshTo(refresh: scroll, animator: animator, handler: handler)
     }
-    
+
     public func beginHeaderRefresh() {
         header?.beginRefreshing()
     }
-    
+
     public func endHeaderRefresh() {
         header?.endRefreshing()
     }
-    
+
     public func removeHeader() {
         var headRefresh = CRRefreshMake(scroll: scroll)
         headRefresh.removeHeader()
     }
-    
+
     /// 添加下拉加载控件
     @discardableResult
     public func addFootRefresh(animator: CRRefreshProtocol = NormalFooterAnimator(), handler: @escaping CRRefreshHandler) -> CRRefreshFooterView {
         return CRRefreshMake.addFootRefreshTo(refresh: scroll, animator: animator, handler: handler)
     }
-    
+
     public func noticeNoMoreData() {
         footer?.endRefreshing()
         footer?.noticeNoMoreData()
     }
-    
+
     public func resetNoMore() {
         footer?.resetNoMoreData()
     }
-    
+
     public func endLoadingMore() {
         footer?.endRefreshing()
     }
-    
+
     public func removeFooter() {
         var footRefresh = CRRefreshMake(scroll: scroll)
         footRefresh.removeFooter()
     }
 }
 
-
 public struct CRRefreshMake: CRRefreshViewProtocol {
-    
     public var scroll: CRRefreshView
-    
+
     internal init(scroll: CRRefreshView) {
         self.scroll = scroll
     }
-    
+
     /// 添加上拉刷新
     @discardableResult
     internal static func addHeadRefreshTo(refresh: CRRefreshView, animator: CRRefreshProtocol = NormalHeaderAnimator(), handler: @escaping CRRefreshHandler) -> CRRefreshHeaderView {
         var make = CRRefreshMake(scroll: refresh)
         make.removeHeader()
-        let header     = CRRefreshHeaderView(animator: animator, handler: handler)
-        let headerH    = header.animator.execute
-        header.frame   = .init(x: 0, y: -headerH, width: refresh.bounds.size.width, height: headerH)
+        let header = CRRefreshHeaderView(animator: animator, handler: handler)
+        let headerH = header.animator.execute
+        header.frame = .init(x: 0, y: -headerH, width: refresh.bounds.size.width, height: headerH)
         refresh.addSubview(header)
         make.header = header
         return header
     }
-    
+
     public mutating func removeHeader() {
         header?.endRefreshing()
         header?.removeFromSuperview()
         header = nil
     }
-    
+
     /// 添加下拉加载
     @discardableResult
     internal static func addFootRefreshTo(refresh: CRRefreshView, animator: CRRefreshProtocol = NormalFooterAnimator(), handler: @escaping CRRefreshHandler) -> CRRefreshFooterView {
         var make = CRRefreshMake(scroll: refresh)
         make.removeFooter()
-        let footer     = CRRefreshFooterView(animator: animator, handler: handler)
-        let footerH    = footer.animator.execute
-        footer.frame   = .init(x: 0, y: refresh.contentSize.height + refresh.contentInset.bottom, width: refresh.bounds.size.width, height: footerH)
+        let footer = CRRefreshFooterView(animator: animator, handler: handler)
+        let footerH = footer.animator.execute
+        footer.frame = .init(x: 0, y: refresh.contentSize.height + refresh.contentInset.bottom, width: refresh.bounds.size.width, height: footerH)
         refresh.addSubview(footer)
         make.footer = footer
         return footer
     }
-    
+
     public mutating func removeFooter() {
         footer?.endRefreshing()
         footer?.removeFromSuperview()
@@ -136,30 +134,42 @@ public struct CRRefreshMake: CRRefreshViewProtocol {
 }
 
 public protocol CRRefreshViewProtocol {
-    var scroll: CRRefreshView {set get}
+    var scroll: CRRefreshView { set get }
     /// 头部控件
-    var header: CRRefreshHeaderView? {set get}
+    var header: CRRefreshHeaderView? { set get }
     /// 头部控件
-    var footer: CRRefreshFooterView? {set get}
+    var footer: CRRefreshFooterView? { set get }
 }
 
 extension CRRefreshViewProtocol {
-    
     public var header: CRRefreshHeaderView? {
         get {
-            return (objc_getAssociatedObject(scroll, &kCRRefreshHeaderKey) as? CRRefreshHeaderView)
+            return withUnsafePointer(to: &kCRRefreshHeaderKey) {
+                objc_getAssociatedObject(scroll, $0) as? CRRefreshHeaderView
+            }
+//            return (objc_getAssociatedObject(scroll, UnsafeRawPointer(Unmanaged.passUnretained(kCRRefreshHeaderKey).toOpaque())) as? CRRefreshHeaderView)
+//            return (objc_getAssociatedObject(scroll, &kCRRefreshHeaderKey) as? CRRefreshHeaderView)
         }
         set {
-            objc_setAssociatedObject(scroll, &kCRRefreshHeaderKey, newValue, .OBJC_ASSOCIATION_RETAIN)
+            withUnsafePointer(to: &kCRRefreshHeaderKey) {
+                objc_setAssociatedObject(scroll, $0, newValue, .OBJC_ASSOCIATION_RETAIN)
+            }
+//            objc_setAssociatedObject(scroll, &kCRRefreshHeaderKey, newValue, .OBJC_ASSOCIATION_RETAIN)
         }
     }
-    
+
     public var footer: CRRefreshFooterView? {
         get {
-            return (objc_getAssociatedObject(scroll, &kCRRefreshFooterKey) as? CRRefreshFooterView)
+            return withUnsafePointer(to: &kCRRefreshFooterKey) {
+                objc_getAssociatedObject(scroll, $0) as? CRRefreshFooterView
+            }
+//            return (objc_getAssociatedObject(scroll, &kCRRefreshFooterKey) as? CRRefreshFooterView)
         }
         set {
-            objc_setAssociatedObject(scroll, &kCRRefreshFooterKey, newValue, .OBJC_ASSOCIATION_RETAIN)
+            withUnsafePointer(to: &kCRRefreshFooterKey) {
+                objc_setAssociatedObject(scroll, $0, newValue, .OBJC_ASSOCIATION_RETAIN)
+            }
+//            objc_setAssociatedObject(scroll, &kCRRefreshFooterKey, newValue, .OBJC_ASSOCIATION_RETAIN)
         }
     }
 }
